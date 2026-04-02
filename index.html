@@ -296,6 +296,82 @@
       line-height: 1.75;
     }
 
+    .auth-panel {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255, 248, 239, 0.9);
+      border: 1px solid rgba(113, 63, 30, 0.08);
+    }
+
+    .auth-panel input {
+      width: 100%;
+      border: 1px solid rgba(113, 63, 30, 0.16);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font: inherit;
+      background: rgba(255, 252, 247, 0.98);
+    }
+
+    .auth-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .mini-button {
+      border: none;
+      cursor: pointer;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font: inherit;
+      font-weight: 700;
+      background: rgba(138, 79, 36, 0.1);
+      color: var(--accent);
+    }
+
+    .auth-status {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .group-table-wrap {
+      margin-top: 12px;
+      overflow: auto;
+      border: 1px solid rgba(113, 63, 30, 0.08);
+      border-radius: 14px;
+      background: rgba(255, 252, 247, 0.98);
+    }
+
+    .group-table {
+      width: 100%;
+      min-width: 860px;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .group-table th, .group-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(113, 63, 30, 0.08);
+      white-space: nowrap;
+    }
+
+    .group-table th {
+      background: rgba(244, 233, 219, 0.94);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .group-table tbody tr:nth-child(even) {
+      background: rgba(255, 248, 239, 0.6);
+    }
+
     @media (max-width: 1080px) {
       .layout { grid-template-columns: 1fr; }
       .state-panel { position: static; }
@@ -337,6 +413,19 @@
         </div>
 
         <div class="slot-list" id="slot-list"></div>
+
+        <div class="auth-panel">
+          <div>
+            <div class="slot-label">生产接口 Token</div>
+            <div class="slot-value">手动粘贴后，静态页面会直接查询生产环境真实团期、库存和售价。不会把 token 写进分享代码里。</div>
+          </div>
+          <input id="gds-token" type="password" placeholder="粘贴 SONGTSAM 生产环境 Authorization token">
+          <div class="auth-actions">
+            <button class="mini-button" id="save-token-button" type="button">保存 token</button>
+            <button class="mini-button" id="clear-token-button" type="button">清除 token</button>
+          </div>
+          <div class="auth-status" id="auth-status">当前未配置 token，只显示规则推荐和预估价。</div>
+        </div>
 
         <div class="state-note">
           价格为辅助销售沟通的预估价，不替代正式核价。当前规则已参考产品知识库、价格政策、核价流程，但实际报价仍需以资源、房型、季节与执行版本为准。
@@ -704,6 +793,23 @@
       { label: "轻松度假", words: ["轻松", "度假", "休闲", "不要太累", "慢一点", "松弛"] }
     ];
 
+    const GDS_BASE_URL = "https://gds.songtsam.com";
+    const GDS_UNIT_CODE = "SONGTSAM";
+    const GDS_TOKEN_KEY = "songtsam-gds-token";
+    const LIVE_MATCH_HINTS = {
+      "BC-01": ["探索生命的力量", "遇见桃花与冰川"],
+      "BC-02": ["最美四百公里"],
+      "BC-03": ["探访莲花秘境"],
+      "LS-02": ["雪山圣湖布达拉"],
+      "LS-05": ["遇见圣湖与圣城"],
+      "ML-01": ["穿越三江并流"],
+      "ML-03": ["天人之际"],
+      "SG-01": ["回到远方的家"],
+      "SG-02": ["亚丁的远山", "初探亚丁三神山"],
+      "SG-03": ["初探亚丁三神山"],
+      "PE-01": ["滇南漫时光", "探寻美好"]
+    };
+
     function chineseNumberToDigit(input) {
       if (!input) return input;
       const pure = input.trim();
@@ -721,6 +827,17 @@
       const match = text.match(regex);
       if (!match) return null;
       return chineseNumberToDigit(match[1]);
+    }
+
+    function uniq(values) {
+      return [...new Set(values.filter(Boolean))];
+    }
+
+    function normalizeText(value) {
+      return String(value || "")
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[|｜\-_/]/g, "");
     }
 
     function parseDemand(text) {
@@ -858,6 +975,62 @@
       }
 
       return { month: fallbackMonth || null, day: null, keyword: null };
+    }
+
+    function formatDateOnly(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function buildDateRange() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const parsed = parseMonthDayFromText(slotState.dateText, slotState.month);
+
+      if (parsed.month && parsed.day) {
+        const begin = new Date(year, parsed.month - 1, parsed.day);
+        const end = new Date(begin);
+        end.setDate(end.getDate() + 14);
+        return { beginDate: formatDateOnly(begin), endDate: formatDateOnly(end) };
+      }
+
+      if (slotState.month) {
+        const begin = new Date(year, slotState.month - 1, 1);
+        const end = new Date(year, slotState.month, 0);
+        return { beginDate: formatDateOnly(begin), endDate: formatDateOnly(end) };
+      }
+
+      const begin = new Date(now);
+      const end = new Date(now);
+      end.setDate(end.getDate() + 60);
+      return { beginDate: formatDateOnly(begin), endDate: formatDateOnly(end) };
+    }
+
+    function getStoredToken() {
+      return window.localStorage.getItem(GDS_TOKEN_KEY) || "";
+    }
+
+    function setStoredToken(token) {
+      if (token) {
+        window.localStorage.setItem(GDS_TOKEN_KEY, token);
+      } else {
+        window.localStorage.removeItem(GDS_TOKEN_KEY);
+      }
+      updateAuthStatus();
+    }
+
+    function updateAuthStatus(message) {
+      const token = getStoredToken();
+      const status = document.getElementById("auth-status");
+      if (message) {
+        status.textContent = message;
+        return;
+      }
+      status.textContent = token
+        ? "已保存 token。后续推荐会自动查询生产环境真实团期。"
+        : "当前未配置 token，只显示规则推荐和预估价。";
     }
 
     function getSeasonPricingContext(destination, month, dateText) {
@@ -1112,7 +1285,148 @@
       return value.toLocaleString("zh-CN");
     }
 
-    function buildRecommendationResponse() {
+    function buildTravelGroupQuery(title) {
+      const { beginDate, endDate } = buildDateRange();
+      const begin = new Date(`${beginDate}T00:00:00+08:00`);
+      const end = new Date(`${endDate}T00:00:00+08:00`);
+      return {
+        firstResult: 0,
+        pageSize: 100,
+        ota: "DIRECT",
+        otaChannel: "CRS",
+        category: "",
+        categorySub: "",
+        companyCode: "",
+        companyLevel: "",
+        gcLevel: "001",
+        itineraryDay: slotState.days || null,
+        rendezvous: "",
+        title,
+        travelGroupCode: "",
+        travelType: "",
+        stas: "I",
+        findAll: false,
+        beginAndEndDate: [begin.toISOString(), end.toISOString()],
+        beginDate,
+        endDate
+      };
+    }
+
+    async function fetchTravelGroups(title) {
+      const token = getStoredToken();
+      if (!token) return [];
+
+      const url = `${GDS_BASE_URL}/product-journey/bks/travelGroupProvider/listTravelGroupForOrder?firstResult=0&pageSize=100&unitCode=${encodeURIComponent(GDS_UNIT_CODE)}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": token
+        },
+        body: JSON.stringify(buildTravelGroupQuery(title))
+      });
+
+      if (!response.ok) {
+        throw new Error(`生产接口请求失败（${response.status}）`);
+      }
+
+      const payload = await response.json();
+      return Array.isArray(payload?.retVal?.datas) ? payload.retVal.datas : [];
+    }
+
+    function getLiveQueryTerms(product) {
+      return {
+        directTerms: uniq([...(LIVE_MATCH_HINTS[product.id] || []), product.name]),
+        fallbackTerms: uniq([product.line, ...(product.destinations || []).slice(0, 2)])
+      };
+    }
+
+    function mapLiveGroup(row) {
+      return {
+        travelGroupCode: row.travelGroupCode,
+        travelType: row.travelType,
+        travelTypeDesc: row.travelTypeDesc,
+        businessType: row.categorySubDesc || row.categoryDesc || "",
+        itineraryDesc: row.itineraryDesc,
+        groupBeginDate: row.groupBeginDate ? row.groupBeginDate.slice(0, 10) : "",
+        groupEndDate: row.groupEndDate ? row.groupEndDate.slice(0, 10) : "",
+        productNum: Number(row.productNum || 0),
+        soldNum: Number(row.soldNum || 0),
+        saleNum: Number(row.saleNum || 0),
+        startingPrice: Number(row.startingPrice || 0)
+      };
+    }
+
+    function groupMatchesProduct(group, product) {
+      const rawText = `${group.travelTypeDesc || ""} ${group.itineraryDesc || ""} ${group.businessType || ""}`;
+      const normalized = normalizeText(rawText);
+      const directKeywords = uniq([...(LIVE_MATCH_HINTS[product.id] || []), product.name]).map(normalizeText);
+      const fallbackKeywords = uniq([product.line, ...(product.destinations || [])]).map(normalizeText);
+
+      const keywordHit = directKeywords.some((keyword) => normalized.includes(keyword));
+      const fallbackHit = fallbackKeywords.some((keyword) => normalized.includes(keyword));
+      if (!keywordHit && !fallbackHit) return false;
+
+      if (slotState.productForm) {
+        const formText = `${group.businessType} ${group.travelTypeDesc}`.replace(/\s+/g, "");
+        if (!formText.includes(slotState.productForm)) return false;
+      }
+
+      if (slotState.nights) {
+        const days = slotState.days || slotState.nights + 1;
+        const compact = rawText.replace(/\s+/g, "");
+        if (!compact.includes(`${slotState.nights}晚${days}天`) && !compact.includes(`${slotState.nights}晚`) && !compact.includes(`${days}天`)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    async function enrichWithLiveGroups(cards) {
+      const token = getStoredToken();
+      if (!token) {
+        return cards.map((card) => ({ ...card, liveQueryEnabled: false, liveGroups: [] }));
+      }
+
+      const enriched = [];
+      for (const card of cards) {
+        const { directTerms, fallbackTerms } = getLiveQueryTerms(card.product);
+        const merged = new Map();
+
+        const directResults = await Promise.all(directTerms.map(fetchTravelGroups));
+        directResults.flat().map(mapLiveGroup).forEach((group) => {
+          if (!groupMatchesProduct(group, card.product)) return;
+          if (group.saleNum <= 0) return;
+          merged.set(group.travelGroupCode, group);
+        });
+
+        if (merged.size === 0 && fallbackTerms.length) {
+          const fallbackResults = await Promise.all(fallbackTerms.map(fetchTravelGroups));
+          fallbackResults.flat().map(mapLiveGroup).forEach((group) => {
+            if (!groupMatchesProduct(group, card.product)) return;
+            if (group.saleNum <= 0) return;
+            merged.set(group.travelGroupCode, group);
+          });
+        }
+
+        enriched.push({
+          ...card,
+          liveQueryEnabled: true,
+          liveGroups: [...merged.values()]
+            .sort((a, b) => {
+              if (a.groupBeginDate === b.groupBeginDate) {
+                return a.travelGroupCode.localeCompare(b.travelGroupCode, "zh-CN");
+              }
+              return a.groupBeginDate.localeCompare(b.groupBeginDate, "zh-CN");
+            })
+            .slice(0, 8)
+        });
+      }
+      return enriched;
+    }
+
+    async function buildRecommendationResponse() {
       const candidateProducts = PRODUCTS.filter((product) => {
         if (slotState.destination && product.destination !== slotState.destination) {
           return false;
@@ -1156,10 +1470,11 @@
           unitText: `预估成人客单参考：约 ¥${formatCurrency(price.adultUnit)} / 人（${price.seasonLabel}）`,
           note: price.note,
           salesTip: buildSalesTip(product, top === product),
+          product,
         };
       });
 
-      return { intro, cards };
+      return { intro, cards: await enrichWithLiveGroups(cards) };
     }
 
     function buildSalesTip(product, isTop) {
@@ -1228,6 +1543,51 @@
       });
     }
 
+    function renderLiveGroups(card) {
+      if (!card.liveQueryEnabled) {
+        return `<div class="muted" style="margin-top:10px;">未配置生产 token，当前只显示规则推荐和预估价。</div>`;
+      }
+      if (!card.liveGroups.length) {
+        return `<div class="muted" style="margin-top:10px;">当前日期范围内没有匹配到真实可下单团期。</div>`;
+      }
+
+      return `
+        <div class="section-title">真实可下单团期</div>
+        <div class="group-table-wrap">
+          <table class="group-table">
+            <thead>
+              <tr>
+                <th>团队代码</th>
+                <th>产品名称</th>
+                <th>业务类型</th>
+                <th>出发日期</th>
+                <th>结束日期</th>
+                <th>库存</th>
+                <th>已占</th>
+                <th>剩余</th>
+                <th>售价</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${card.liveGroups.map((group) => `
+                <tr>
+                  <td>${group.travelGroupCode}</td>
+                  <td>${group.travelTypeDesc || card.title}</td>
+                  <td>${group.businessType || "待确认"}</td>
+                  <td>${group.groupBeginDate || "待确认"}</td>
+                  <td>${group.groupEndDate || "待确认"}</td>
+                  <td>${group.productNum}</td>
+                  <td>${group.soldNum}</td>
+                  <td>${group.saleNum}</td>
+                  <td>${group.startingPrice ? `¥${formatCurrency(group.startingPrice)}` : "待确认"}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
     function addMessage(role, content, cards = null) {
       const container = document.getElementById("messages");
       const message = document.createElement("div");
@@ -1268,6 +1628,7 @@
             <ul class="bullet-list">${card.risks.map((item) => `<li>${item}</li>`).join("")}</ul>
             <div class="section-title">销售建议</div>
             <div class="muted">${card.salesTip}</div>
+            ${renderLiveGroups(card)}
           `;
           stack.appendChild(el);
         });
@@ -1278,7 +1639,7 @@
       container.scrollTop = container.scrollHeight;
     }
 
-    function handleUserMessage(text) {
+    async function handleUserMessage(text) {
       addMessage("user", text);
       const parsed = parseDemand(text);
       mergeSlots(parsed);
@@ -1290,7 +1651,7 @@
         return;
       }
 
-      const response = buildRecommendationResponse();
+      const response = await buildRecommendationResponse();
       addMessage("assistant", response.intro, response.cards);
     }
 
@@ -1330,25 +1691,49 @@
       renderSlots();
       addMessage(
         "assistant",
-        "你可以直接把客户需求丢给我，例如：\n“客户想 4 月去林芝看桃花，5 晚 6 天，2 大 1 小，偏轻松，预算品质优先。”\n\n如果信息不完整，我会继续追问；如果信息够了，我会直接给你推荐产品和预估价。"
+        "你可以直接把客户需求丢给我，例如：\n“客户想 4 月去林芝看桃花，5 晚 6 天，2 大 1 小，偏轻松，预算品质优先。”\n\n如果信息不完整，我会继续追问；如果信息够了，我会直接给你推荐产品和预估价。若已配置生产 token，我还会同步查询真实团期、库存和售价。"
       );
     }
 
-    function sendMessage() {
+    async function sendMessage() {
       const input = document.getElementById("user-input");
       const text = input.value.trim();
       if (!text) return;
-      handleUserMessage(text);
-      input.value = "";
-      input.focus();
+      const sendButton = document.getElementById("send-button");
+      sendButton.disabled = true;
+      sendButton.textContent = "处理中...";
+      try {
+        await handleUserMessage(text);
+        input.value = "";
+        input.focus();
+      } catch (error) {
+        addMessage("assistant", `查询失败：${error.message}。如果你已经配置了 token，先确认 token 还有效，再重试。`);
+      } finally {
+        sendButton.disabled = false;
+        sendButton.textContent = "发送";
+      }
     }
 
     document.getElementById("send-button").addEventListener("click", sendMessage);
     document.getElementById("clear-button").addEventListener("click", resetConversation);
+    document.getElementById("save-token-button").addEventListener("click", () => {
+      const input = document.getElementById("gds-token");
+      const token = input.value.trim();
+      if (!token) {
+        updateAuthStatus("请先粘贴 token 再保存。");
+        return;
+      }
+      setStoredToken(token);
+      input.value = "";
+    });
+    document.getElementById("clear-token-button").addEventListener("click", () => {
+      setStoredToken("");
+    });
     document.getElementById("user-input").addEventListener("keydown", (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key === "Enter") sendMessage();
     });
 
+    updateAuthStatus();
     seedPrompts();
     resetConversation();
   </script>
