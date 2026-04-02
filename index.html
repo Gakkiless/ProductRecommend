@@ -806,7 +806,7 @@
     const GDS_BASE_URL = "https://gds.songtsam.com";
     const GDS_UNIT_CODE = "SONGTSAM";
     const GDS_TOKEN_KEY = "songtsam-gds-token";
-    const LIVE_MATCH_HINTS = {
+    const LIVE_QUERY_HINTS = {
       "BC-01": ["探索生命的力量", "遇见桃花与冰川"],
       "BC-02": ["最美四百公里"],
       "BC-03": ["探访莲花秘境"],
@@ -818,6 +818,20 @@
       "SG-02": ["亚丁的远山", "初探亚丁三神山"],
       "SG-03": ["初探亚丁三神山"],
       "PE-01": ["滇南漫时光", "探寻美好"]
+    };
+
+    const LIVE_ATTACH_HINTS = {
+      "BC-01": ["探索生命的力量"],
+      "BC-02": ["最美四百公里"],
+      "BC-03": ["探访莲花秘境"],
+      "LS-02": ["雪山圣湖布达拉"],
+      "LS-05": ["遇见圣湖与圣城"],
+      "ML-01": ["穿越三江并流"],
+      "ML-03": ["天人之际"],
+      "SG-01": ["回到远方的家"],
+      "SG-02": ["亚丁的远山"],
+      "SG-03": ["初探亚丁三神山"],
+      "PE-01": ["滇南漫时光"]
     };
 
     function chineseNumberToDigit(input) {
@@ -1357,7 +1371,7 @@
 
     function getLiveQueryTerms(product) {
       return {
-        directTerms: uniq([...(LIVE_MATCH_HINTS[product.id] || []), product.name]),
+        directTerms: uniq([...(LIVE_QUERY_HINTS[product.id] || []), product.name]),
         fallbackTerms: uniq([product.line, ...(product.destinations || []).slice(0, 2)])
       };
     }
@@ -1379,14 +1393,14 @@
     }
 
     function groupMatchesProduct(group, product) {
-      const rawText = `${group.travelTypeDesc || ""} ${group.itineraryDesc || ""} ${group.businessType || ""}`;
-      const normalized = normalizeText(rawText);
-      const directKeywords = uniq([...(LIVE_MATCH_HINTS[product.id] || []), product.name]).map(normalizeText);
-      const fallbackKeywords = uniq([product.line, ...(product.destinations || [])]).map(normalizeText);
+      const nameText = normalizeText(group.travelTypeDesc || "");
+      const metaText = normalizeText(`${group.businessType || ""} ${group.itineraryDesc || ""}`);
+      const attachKeywords = uniq([...(LIVE_ATTACH_HINTS[product.id] || []), product.name]).map(normalizeText);
+      const fallbackKeywords = uniq([product.line]).map(normalizeText);
 
-      const keywordHit = directKeywords.some((keyword) => normalized.includes(keyword));
-      const fallbackHit = fallbackKeywords.some((keyword) => normalized.includes(keyword));
-      if (!keywordHit && !fallbackHit) return false;
+      const nameHit = attachKeywords.some((keyword) => nameText.includes(keyword));
+      const fallbackHit = fallbackKeywords.some((keyword) => metaText.includes(keyword));
+      if (!nameHit && !fallbackHit) return false;
 
       if (slotState.productForm) {
         const formText = `${group.businessType} ${group.travelTypeDesc}`.replace(/\s+/g, "");
@@ -1395,7 +1409,7 @@
 
       if (slotState.nights) {
         const days = slotState.days || slotState.nights + 1;
-        const compact = rawText.replace(/\s+/g, "");
+        const compact = `${group.travelTypeDesc || ""}${group.itineraryDesc || ""}${group.businessType || ""}`.replace(/\s+/g, "");
         if (!compact.includes(`${slotState.nights}晚${days}天`) && !compact.includes(`${slotState.nights}晚`) && !compact.includes(`${days}天`)) {
           return false;
         }
