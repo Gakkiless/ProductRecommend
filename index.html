@@ -1,0 +1,1207 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>松赞销售对话助手</title>
+  <style>
+    :root {
+      --bg: #efe7db;
+      --panel: rgba(255, 250, 242, 0.92);
+      --panel-strong: #fffaf3;
+      --ink: #231915;
+      --muted: #6d5c51;
+      --line: rgba(105, 64, 32, 0.12);
+      --accent: #8a4f24;
+      --accent-2: #c88b54;
+      --accent-soft: rgba(138, 79, 36, 0.1);
+      --shadow: 0 22px 60px rgba(62, 34, 18, 0.12);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(200, 139, 84, 0.24), transparent 24%),
+        radial-gradient(circle at right 18%, rgba(138, 79, 36, 0.12), transparent 22%),
+        linear-gradient(180deg, #ece1d0 0%, #f4ede4 46%, #efe6da 100%);
+    }
+
+    .app {
+      width: min(1380px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 20px 0 28px;
+    }
+
+    .chat-panel, .state-panel, .message, .result-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .chat-panel, .state-panel {
+      border-radius: var(--radius-xl);
+      padding: 22px;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, h4, p { margin: 0; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .chat-panel {
+      min-height: calc(100vh - 48px);
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 14px;
+    }
+
+    .chat-head h2, .state-head h2 {
+      font-size: 26px;
+      margin-bottom: 8px;
+    }
+
+    .chat-head p, .state-head p, .muted {
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    .quick-prompts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .quick-prompts button, .send-button, .clear-button {
+      border: none;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .quick-prompts button {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 700;
+      transition: transform 140ms ease;
+    }
+
+    .quick-prompts button:hover { transform: translateY(-1px); }
+
+    .messages {
+      overflow: auto;
+      padding-right: 6px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .message {
+      border-radius: 18px;
+      padding: 16px;
+      max-width: min(100%, 860px);
+    }
+
+    .message.user {
+      justify-self: end;
+      background: linear-gradient(135deg, #9c5a2b, #7d431d);
+      color: #fff8f2;
+    }
+
+    .message.assistant {
+      background: var(--panel-strong);
+    }
+
+    .message-meta {
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .message.user .message-meta {
+      color: rgba(255, 248, 242, 0.78);
+    }
+
+    .message-body {
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .result-stack {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .result-card {
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      background: rgba(255, 248, 239, 0.98);
+    }
+
+    .result-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+      margin-bottom: 8px;
+    }
+
+    .result-top h4 {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .score {
+      flex: none;
+      min-width: 74px;
+      padding: 8px 10px;
+      text-align: center;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #f4dfc6, #e5b888);
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .pill {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(138, 79, 36, 0.1);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--accent);
+      margin: 10px 0 6px;
+    }
+
+    .bullet-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .composer {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 88px;
+      max-height: 200px;
+      border: 1px solid rgba(113, 63, 30, 0.16);
+      border-radius: 18px;
+      padding: 14px 16px;
+      font: inherit;
+      color: var(--ink);
+      background: rgba(255, 252, 247, 0.98);
+    }
+
+    .send-button, .clear-button {
+      padding: 14px 18px;
+      border-radius: 16px;
+      font-weight: 800;
+    }
+
+    .send-button {
+      color: #fff8f1;
+      background: linear-gradient(135deg, #a05e30, #7b421c);
+    }
+
+    .clear-button {
+      background: rgba(138, 79, 36, 0.1);
+      color: var(--accent);
+    }
+
+    .state-panel {
+      position: sticky;
+      top: 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .slot-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .slot {
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255, 248, 239, 0.88);
+      border: 1px solid rgba(113, 63, 30, 0.08);
+    }
+
+    .slot-label {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .slot-value {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .state-note {
+      border-radius: 16px;
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(200, 139, 84, 0.12), rgba(138, 79, 36, 0.06));
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns: 1fr; }
+      .state-panel { position: static; }
+    }
+
+    @media (max-width: 720px) {
+      .app { width: min(100% - 16px, 1380px); padding-top: 10px; }
+      .chat-panel, .state-panel { padding: 16px; }
+      .composer { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="layout">
+      <div class="chat-panel">
+        <div class="chat-head">
+          <p class="eyebrow">Songtsam Sales Copilot</p>
+          <h2>销售对话框</h2>
+          <p>你可以直接输入完整需求，也可以一句一句补充。助手会记住你前面说过的信息。</p>
+        </div>
+
+        <div class="quick-prompts" id="quick-prompts"></div>
+
+        <div class="messages" id="messages"></div>
+
+        <div class="composer">
+          <textarea id="user-input" placeholder="例如：客户想 4 月去林芝看桃花，5 晚 6 天，2 大 1 小，偏轻松，预算品质优先，想住得好一点。"></textarea>
+          <button class="send-button" id="send-button">发送</button>
+          <button class="clear-button" id="clear-button">重置</button>
+        </div>
+      </div>
+
+      <aside class="state-panel">
+        <div class="state-head">
+          <p class="eyebrow">Context</p>
+          <h2>已识别需求</h2>
+          <p>这里会实时显示助手当前理解到的客户需求。</p>
+        </div>
+
+        <div class="slot-list" id="slot-list"></div>
+
+        <div class="state-note">
+          价格为辅助销售沟通的预估价，不替代正式核价。当前规则已参考产品知识库、价格政策、核价流程，但实际报价仍需以资源、房型、季节与执行版本为准。
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    const PRODUCTS = [
+      {
+        id: "BC-02",
+        name: "最美四百公里",
+        line: "冰川环线",
+        route: "波波来波达",
+        destination: "glacier",
+        destinations: ["林芝", "波密", "来古", "南迦巴瓦"],
+        nights: 5,
+        forms: ["自由行"],
+        tags: ["自然", "风景", "冰川", "经典", "轻松"],
+        intensity: "light",
+        familyFriendly: true,
+        elderFriendly: false,
+        foreignerReady: true,
+        seasonMonths: [3,4,5,6,7,8,9,10],
+        description: "林芝自由行里最容易成交的经典线，风景集中、节奏相对轻松。",
+        itinerary: "波密 → 来古 → 南迦巴瓦",
+        pricing: { "自由行": 15420 },
+        cautions: ["自由行按行程天数核车司", "桃花季与旺季资源更紧"],
+      },
+      {
+        id: "BC-01",
+        name: "探索生命的力量",
+        line: "冰川环线",
+        route: "波波来来波达达",
+        destination: "glacier",
+        destinations: ["林芝", "波密", "来古", "南迦巴瓦"],
+        nights: 7,
+        forms: ["主题团", "私享管家"],
+        tags: ["自然", "经典", "冰川", "桃花", "高景观"],
+        intensity: "medium",
+        familyFriendly: true,
+        elderFriendly: false,
+        foreignerReady: true,
+        seasonMonths: [3,4,5,6,7,8,9,10],
+        description: "林芝高景观重磅线，适合看桃花、冰川、雪山的客群。",
+        itinerary: "波密 → 来古 → 波密 → 南迦巴瓦",
+        pricing: { "主题团": 16800, "私享管家": 18600 },
+        cautions: ["外籍客人需提前核验资质与证照", "春季档期要尽早锁资源"],
+      },
+      {
+        id: "BC-03",
+        name: "探访莲花秘境",
+        line: "冰川环线",
+        route: "波波墨波达",
+        destination: "glacier",
+        destinations: ["林芝", "波密", "墨脱", "南迦巴瓦"],
+        nights: 5,
+        forms: ["自由行"],
+        tags: ["自然", "小众", "墨脱", "风景"],
+        intensity: "high",
+        familyFriendly: false,
+        elderFriendly: false,
+        foreignerReady: true,
+        seasonMonths: [4,5,6,7,8,9,10],
+        description: "更小众、更有记忆点，适合明确想走墨脱方向的客人。",
+        itinerary: "波密 → 墨脱 → 波密 → 南迦巴瓦",
+        pricing: { "自由行": 16200 },
+        cautions: ["不适合老人和低耐受客群", "需重点沟通路况和转场体验"],
+      },
+      {
+        id: "LS-02",
+        name: "雪山圣湖布达拉",
+        line: "拉萨环线",
+        route: "达达巴巴拉拉拉",
+        destination: "lhasa",
+        destinations: ["南迦巴瓦", "巴松措", "拉萨"],
+        nights: 6,
+        forms: ["主题团", "私享管家"],
+        tags: ["自然", "人文", "经典", "圣湖", "首访西藏"],
+        intensity: "medium",
+        familyFriendly: true,
+        elderFriendly: true,
+        foreignerReady: true,
+        seasonMonths: [3,4,5,6,7,8,9,10],
+        description: "雪山、圣湖、布宫认知最完整的西藏经典款，适合第一次深度到访。",
+        itinerary: "南迦巴瓦 → 巴松措 → 拉萨",
+        pricing: { "主题团": 16200, "私享管家": 18200 },
+        cautions: ["布宫等核心资源需预约", "异地接送机会增加车司管天数"],
+      },
+      {
+        id: "LS-05",
+        name: "遇见圣湖与圣城",
+        line: "拉萨环线",
+        route: "巴巴巴拉拉",
+        destination: "lhasa",
+        destinations: ["巴松措", "拉萨"],
+        nights: 5,
+        forms: ["自由行"],
+        tags: ["自由行", "自然", "人文", "轻松"],
+        intensity: "light",
+        familyFriendly: true,
+        elderFriendly: true,
+        foreignerReady: true,
+        seasonMonths: [4,5,6,7,8,9,10],
+        description: "偏自由节奏的圣湖圣城组合，适合想保留更多自主安排的客人。",
+        itinerary: "巴松措 → 拉萨",
+        pricing: { "自由行": 14900 },
+        cautions: ["自由行不含管家", "接送机与城市预约需提早规划"],
+      },
+      {
+        id: "LS-03",
+        name: "到拉萨及其更远方",
+        line: "拉萨环线",
+        route: "拉拉拉拉日拉拉",
+        destination: "lhasa",
+        destinations: ["拉萨", "日喀则"],
+        nights: 6,
+        forms: ["主题团", "私享管家"],
+        tags: ["人文", "深度", "寺院", "拉萨"],
+        intensity: "medium",
+        familyFriendly: false,
+        elderFriendly: true,
+        foreignerReady: true,
+        seasonMonths: [4,5,6,7,8,9,10],
+        description: "更偏人文深挖，适合明确想看西藏精神核心与城市文化的客人。",
+        itinerary: "拉萨周边深度 → 日喀则",
+        pricing: { "主题团": 15800, "私享管家": 17800 },
+        cautions: ["更适合文化兴趣强的客群", "对自然大景预期高的客人要提前调预期"],
+      },
+      {
+        id: "ML-03",
+        name: "天人之际",
+        line: "梅里环线",
+        route: "奔奔梅梅香",
+        destination: "meili",
+        destinations: ["奔子栏", "梅里", "香格里拉"],
+        nights: 5,
+        forms: ["自由行", "主题团"],
+        tags: ["自然", "梅里", "经典", "均衡"],
+        intensity: "medium",
+        familyFriendly: true,
+        elderFriendly: false,
+        foreignerReady: false,
+        seasonMonths: [1,2,3,4,5,9,10,11,12],
+        description: "梅里方向里接受度很高的一条，景观强，节奏比超长线更友好。",
+        itinerary: "奔子栏 → 梅里 → 香格里拉",
+        pricing: { "自由行": 14600, "主题团": 15600 },
+        cautions: ["冬季版本和常规版本不同", "高海拔适应要单独判断"],
+      },
+      {
+        id: "ML-01",
+        name: "穿越三江并流",
+        line: "梅里环线",
+        route: "石石丙丙茨梅香丽",
+        destination: "meili",
+        destinations: ["石月亮", "丙中洛", "茨中", "梅里"],
+        nights: 8,
+        forms: ["主题团", "私享管家"],
+        tags: ["自然", "长线", "经典", "重磅"],
+        intensity: "high",
+        familyFriendly: false,
+        elderFriendly: false,
+        foreignerReady: false,
+        seasonMonths: [1,2,3,4,5,9,10,11,12],
+        description: "三江并流重磅经典线，适合明确想把云南段一次吃透的客人。",
+        itinerary: "石月亮 → 丙中洛 → 茨中 → 梅里 → 香格里拉 → 丽江",
+        pricing: { "主题团": 18800, "私享管家": 21200 },
+        cautions: ["行程长、转场多", "更适合体力和时间都比较充足的客人"],
+      },
+      {
+        id: "SG-01",
+        name: "回到远方的家",
+        line: "香格里拉环线",
+        route: "丽丽塔塔绿绿",
+        destination: "shangri-la",
+        destinations: ["丽江", "塔城", "绿谷"],
+        nights: 6,
+        forms: ["自由行", "主题团", "私享管家"],
+        tags: ["轻松", "度假", "自然", "家庭友好"],
+        intensity: "light",
+        familyFriendly: true,
+        elderFriendly: true,
+        foreignerReady: false,
+        seasonMonths: [1,2,3,4,5,6,7,8,9,10,11,12],
+        description: "很适合首访云南段、又不想太辛苦的客户，综合接受度很高。",
+        itinerary: "丽江 → 塔城 → 绿谷",
+        pricing: { "自由行": 12800, "主题团": 13800, "私享管家": 15600 },
+        cautions: ["更偏松弛度假感，卖点不在极致大景", "涉及三店接送机有豁免规则"],
+      },
+      {
+        id: "SG-02",
+        name: "亚丁的远山",
+        line: "香格里拉环线",
+        route: "丽香香亚亚亚",
+        destination: "shangri-la",
+        destinations: ["丽江", "香格里拉", "亚丁"],
+        nights: 6,
+        forms: ["主题团", "私享管家"],
+        tags: ["自然", "神山", "摄影", "亚丁"],
+        intensity: "medium",
+        familyFriendly: false,
+        elderFriendly: false,
+        foreignerReady: false,
+        seasonMonths: [1,2,3,4,5,9,10,11,12],
+        description: "适合冲着亚丁神山和高原风景来的客人，景观卖点非常明确。",
+        itinerary: "丽江 → 香格里拉 → 亚丁",
+        pricing: { "主题团": 15200, "私享管家": 17300 },
+        cautions: ["高海拔和景区步行强度要前置沟通"],
+      },
+      {
+        id: "PE-01",
+        name: "滇南漫时光",
+        line: "普洱",
+        route: "普普普普",
+        destination: "puer",
+        destinations: ["普洱"],
+        nights: 4,
+        forms: ["自由行", "主题团"],
+        tags: ["轻松", "美食", "咖啡", "茶文化", "度假"],
+        intensity: "light",
+        familyFriendly: true,
+        elderFriendly: true,
+        foreignerReady: false,
+        seasonMonths: [1,2,3,4,5,10,11,12],
+        description: "适合想要松弛感、茶咖啡体验和在地生活方式的客人。",
+        itinerary: "普洱在地度假",
+        pricing: { "自由行": 9800, "主题团": 10800 },
+        cautions: ["更偏生活方式体验，不是雪山大景产品"],
+      },
+      {
+        id: "PE-03",
+        name: "寻找珍贵风物",
+        line: "昆明+普洱",
+        route: "昆昆普普普",
+        destination: "puer",
+        destinations: ["昆明", "普洱"],
+        nights: 5,
+        forms: ["主题团", "私享管家"],
+        tags: ["城市", "美食", "咖啡", "文化", "轻松"],
+        intensity: "light",
+        familyFriendly: true,
+        elderFriendly: true,
+        foreignerReady: false,
+        seasonMonths: [1,2,3,4,5,10,11,12],
+        description: "适合不走高海拔，又想要城市感和度假感兼具的客户。",
+        itinerary: "昆明 → 普洱",
+        pricing: { "主题团": 11800, "私享管家": 13800 },
+        cautions: ["风景张力不如雪山线，卖点要放在生活方式和风味体验上"],
+      },
+      {
+        id: "CH-01",
+        name: "寒假亲子·普洱",
+        line: "寒假亲子",
+        route: "亲子普洱",
+        destination: "puer",
+        destinations: ["普洱"],
+        nights: 4,
+        forms: ["主题团", "私享管家"],
+        tags: ["亲子", "寒假", "轻松", "普洱"],
+        intensity: "light",
+        familyFriendly: true,
+        elderFriendly: true,
+        foreignerReady: false,
+        seasonMonths: [1,2],
+        description: "假期亲子客群比较容易承接，适合寒假家庭客户。",
+        itinerary: "普洱亲子体验",
+        pricing: { "主题团": 11200, "私享管家": 13200 },
+        cautions: ["季节性强，推荐时要确认当前是否在售"],
+      },
+      {
+        id: "TH-01",
+        name: "藏地桃源漫旅",
+        line: "桃花节",
+        route: "波波达达百百",
+        destination: "glacier",
+        destinations: ["波密", "南迦巴瓦", "百巴"],
+        nights: 6,
+        forms: ["主题团", "私享管家"],
+        tags: ["桃花季", "花季", "高景观", "春季"],
+        intensity: "medium",
+        familyFriendly: true,
+        elderFriendly: false,
+        foreignerReady: true,
+        seasonMonths: [3,4],
+        description: "春季窗口非常强势，适合明确想看桃花的客群。",
+        itinerary: "波密 → 南迦巴瓦 → 百巴",
+        pricing: { "主题团": 17600, "私享管家": 19800 },
+        cautions: ["季节性非常强", "资源与房态会更紧"],
+      },
+      {
+        id: "LC-01",
+        name: "飞向藏地桃花源",
+        line: "低空旅行",
+        route: "低空西藏",
+        destination: "glacier",
+        destinations: ["林芝", "藏地低空"],
+        nights: 4,
+        forms: ["私享管家"],
+        tags: ["低空", "高端", "稀缺", "效率"],
+        intensity: "light",
+        familyFriendly: false,
+        elderFriendly: false,
+        foreignerReady: true,
+        seasonMonths: [3,4,5,6,9,10],
+        description: "高端稀缺款，更适合预算充足、追求效率和独特性的客户。",
+        itinerary: "藏地低空组合体验",
+        pricing: { "私享管家": 28800 },
+        cautions: ["天气和资源限制更强", "不适合价格敏感客户"],
+      }
+    ];
+
+    const QUICK_PROMPTS = [
+      "客户想 4 月去林芝看桃花，5 晚 6 天，2 大 1 小，轻松一点",
+      "两位客人想去梅里，6 天左右，喜欢雪山和摄影，品质优先",
+      "一家三口寒假出行，想轻松一点，最好亲子友好，不想高反",
+      "客户想去拉萨，6 晚 7 天，偏人文寺院，带老人同行",
+    ];
+
+    const slotState = {
+      destination: null,
+      month: null,
+      nights: null,
+      days: null,
+      travelers: null,
+      adults: null,
+      children: null,
+      elders: false,
+      foreignGuests: false,
+      productForm: null,
+      preference: null,
+      budget: null,
+      customization: "标品优先",
+    };
+
+    const destinationMap = [
+      { key: "glacier", label: "林芝 / 冰川", words: ["林芝", "波密", "来古", "南迦巴瓦", "墨脱", "冰川", "桃花", "百巴"] },
+      { key: "lhasa", label: "拉萨 / 藏文化", words: ["拉萨", "布达拉宫", "大昭寺", "色拉寺", "巴松措", "乃朗", "日喀则"] },
+      { key: "meili", label: "梅里 / 三江", words: ["梅里", "三江", "丙中洛", "茨中", "石月亮", "怒江", "奔子栏"] },
+      { key: "shangri-la", label: "香格里拉 / 亚丁", words: ["香格里拉", "亚丁", "丽江", "塔城", "泸沽湖", "神山"] },
+      { key: "puer", label: "昆明 / 普洱", words: ["普洱", "昆明", "景迈", "咖啡", "茶山", "citywalk", "滇南"] }
+    ];
+
+    const preferenceMap = [
+      { label: "自然风景", words: ["雪山", "风景", "自然", "景色", "桃花", "花季", "冰川"] },
+      { label: "人文寺院", words: ["人文", "寺院", "文化", "布宫", "佛教", "古城", "朝圣"] },
+      { label: "徒步户外", words: ["徒步", "户外", "爬山", "轻徒步", "穿越", "马背"] },
+      { label: "美食茶咖", words: ["美食", "吃", "咖啡", "茶", "茶山", "风味"] },
+      { label: "轻松度假", words: ["轻松", "度假", "休闲", "不要太累", "慢一点", "松弛"] }
+    ];
+
+    function chineseNumberToDigit(input) {
+      if (!input) return input;
+      const pure = input.trim();
+      if (/^\d+$/.test(pure)) return Number(pure);
+      const map = { "零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
+      if (pure === "十") return 10;
+      if (pure.length === 2 && pure[0] === "十") return 10 + map[pure[1]];
+      if (pure.length === 2 && pure[1] === "十") return map[pure[0]] * 10;
+      if (pure.length === 3 && pure[1] === "十") return map[pure[0]] * 10 + map[pure[2]];
+      if (pure.length === 1 && map[pure] !== undefined) return map[pure];
+      return Number.NaN;
+    }
+
+    function extractFirstNumber(text, regex) {
+      const match = text.match(regex);
+      if (!match) return null;
+      return chineseNumberToDigit(match[1]);
+    }
+
+    function parseDemand(text) {
+      const update = {};
+      const normalized = text.replace(/\s+/g, "");
+
+      for (const item of destinationMap) {
+        if (item.words.some((word) => normalized.includes(word))) {
+          update.destination = item.key;
+          break;
+        }
+      }
+
+      const month = extractFirstNumber(normalized, /([一二三四五六七八九十两\d]{1,3})月/);
+      if (month) update.month = month;
+
+      const nights = extractFirstNumber(normalized, /([一二三四五六七八九十两\d]{1,3})晚/);
+      if (nights) update.nights = nights;
+
+      const days = extractFirstNumber(normalized, /([一二三四五六七八九十两\d]{1,3})天/);
+      if (days) update.days = days;
+      if (!update.nights && days && days > 1) update.nights = days - 1;
+
+      const bigSmall = normalized.match(/([一二三四五六七八九十两\d]{1,3})大([一二三四五六七八九十两\d]{1,3})小/);
+      if (bigSmall) {
+        update.adults = chineseNumberToDigit(bigSmall[1]);
+        update.children = chineseNumberToDigit(bigSmall[2]);
+        update.travelers = update.adults + update.children;
+      }
+
+      const travelers = extractFirstNumber(normalized, /([一二三四五六七八九十两\d]{1,3})(?:人|位)/);
+      if (!update.travelers && travelers) update.travelers = travelers;
+
+      if (/老人|长辈|爸妈|父母/.test(normalized)) update.elders = true;
+      if (/小孩|儿童|孩子|亲子/.test(normalized)) update.children = update.children || 1;
+      if (/外籍|外国|老外/.test(normalized)) update.foreignGuests = true;
+
+      if (/自由行/.test(normalized)) update.productForm = "自由行";
+      if (/私享|私享团|私享管家/.test(normalized)) update.productForm = "私享管家";
+      if (/主题团|跟团|拼团/.test(normalized)) update.productForm = "主题团";
+      if (/定制/.test(normalized)) update.customization = "深度定制";
+
+      if (/预算高|品质优先|住得好|高端/.test(normalized)) update.budget = "品质优先";
+      if (/控制预算|性价比|别太贵|价格敏感/.test(normalized)) update.budget = "价格敏感";
+      if (/平衡|均衡/.test(normalized)) update.budget = "平衡型";
+
+      for (const item of preferenceMap) {
+        if (item.words.some((word) => normalized.includes(word))) {
+          update.preference = item.label;
+          break;
+        }
+      }
+
+      return update;
+    }
+
+    function mergeSlots(update) {
+      Object.keys(update).forEach((key) => {
+        if (update[key] !== null && update[key] !== undefined && update[key] !== false) {
+          slotState[key] = update[key];
+        }
+      });
+      if (slotState.children && !slotState.travelers && slotState.adults) {
+        slotState.travelers = slotState.adults + slotState.children;
+      }
+      if (slotState.days && !slotState.nights && slotState.days > 1) {
+        slotState.nights = slotState.days - 1;
+      }
+    }
+
+    function getMissingSlots() {
+      const missing = [];
+      if (!slotState.destination) missing.push("目的地");
+      if (!slotState.nights) missing.push("晚数");
+      if (!slotState.travelers && !slotState.adults) missing.push("人数");
+      return missing;
+    }
+
+    function seasonMultiplier(destination, month) {
+      if (!month) return 1;
+      if (destination === "glacier" && [3,4].includes(month)) return 1.08;
+      if (destination === "lhasa" && [4,5,6,7,8,9,10].includes(month)) return 1.05;
+      if (destination === "meili" && [1,2,10,11].includes(month)) return 1.03;
+      if (destination === "puer" && [6,7,8].includes(month)) return 0.96;
+      return 1;
+    }
+
+    function scoreProduct(product) {
+      let score = 58;
+      const reasons = [];
+      const risks = [...product.cautions];
+
+      if (slotState.destination) {
+        if (product.destination === slotState.destination) {
+          score += 22;
+          reasons.push("目的地方向高度匹配。");
+        } else {
+          score -= 20;
+        }
+      }
+
+      if (slotState.nights) {
+        const gap = Math.abs(product.nights - slotState.nights);
+        if (gap === 0) {
+          score += 16;
+          reasons.push("晚数和客户需求一致。");
+        } else if (gap === 1) {
+          score += 8;
+          reasons.push("晚数接近，适合作为备选或轻微变形方案。");
+        } else if (gap >= 3) {
+          score -= 14;
+          risks.push("晚数差距偏大，若推进通常要调整结构。");
+        }
+      }
+
+      if (slotState.productForm) {
+        if (product.forms.includes(slotState.productForm)) {
+          score += 15;
+          reasons.push(`符合客户偏好的${slotState.productForm}形态。`);
+        } else {
+          score -= 16;
+          risks.push(`当前产品主形态不是${slotState.productForm}。`);
+        }
+      }
+
+      if (slotState.month) {
+        if (product.seasonMonths.includes(slotState.month)) {
+          score += 10;
+          reasons.push("出行月份在产品较优窗口内。");
+        } else {
+          score -= 18;
+          risks.push("客户出行月份不是该产品的强窗口，需谨慎推荐。");
+        }
+      }
+
+      if (slotState.preference) {
+        const pref = slotState.preference;
+        if (pref === "自然风景" && product.tags.some((tag) => ["自然", "风景", "高景观", "冰川"].includes(tag))) {
+          score += 10;
+          reasons.push("自然景观卖点较强。");
+        }
+        if (pref === "人文寺院" && product.tags.some((tag) => ["人文", "寺院", "文化"].includes(tag))) {
+          score += 10;
+          reasons.push("人文和文化浓度更高。");
+        }
+        if (pref === "徒步户外" && product.intensity !== "light") {
+          score += 8;
+          reasons.push("更适合偏户外体验的客人。");
+        }
+        if (pref === "美食茶咖" && product.tags.some((tag) => ["美食", "咖啡", "茶文化"].includes(tag))) {
+          score += 12;
+          reasons.push("茶咖啡和风味体验匹配度高。");
+        }
+        if (pref === "轻松度假" && product.intensity === "light") {
+          score += 12;
+          reasons.push("节奏相对轻松，更容易承接。");
+        }
+      }
+
+      if (slotState.children) {
+        if (product.familyFriendly) {
+          score += 10;
+          reasons.push("对儿童同行更友好。");
+        } else {
+          score -= 14;
+          risks.push("儿童同行体验可能不够理想。");
+        }
+      }
+
+      if (slotState.elders) {
+        if (product.elderFriendly) {
+          score += 10;
+          reasons.push("老人同行更容易承接。");
+        } else {
+          score -= 14;
+          risks.push("老人同行可能受强度和高海拔影响。");
+        }
+      }
+
+      if (slotState.foreignGuests) {
+        if (product.foreignerReady) {
+          reasons.push("有外籍客人时，这条线相对更容易进入正式核验流程。");
+        } else {
+          score -= 4;
+          risks.push("若有外籍客人，仍需单独核验证照和执行限制。");
+        }
+      }
+
+      if (slotState.budget === "价格敏感" && product.tags.some((tag) => ["低空", "高端", "稀缺"].includes(tag))) {
+        score -= 18;
+        risks.push("客户价格敏感，这条产品承接难度偏高。");
+      }
+
+      if (slotState.customization === "深度定制" && !product.tags.includes("经典")) {
+        score += 4;
+      }
+
+      return {
+        ...product,
+        score: Math.max(0, Math.min(100, score)),
+        reasons: [...new Set(reasons)].slice(0, 4),
+        risks: [...new Set(risks)].slice(0, 4),
+      };
+    }
+
+    function estimatePrice(product) {
+      const form = slotState.productForm && product.forms.includes(slotState.productForm)
+        ? slotState.productForm
+        : product.forms[0];
+
+      const adultUnit = product.pricing[form];
+      const adults = slotState.adults || slotState.travelers || 2;
+      const children = slotState.children || 0;
+      const multiplier = seasonMultiplier(product.destination, slotState.month);
+      const adjustedAdult = Math.round(adultUnit * multiplier);
+
+      let totalMin = 0;
+      let totalMax = 0;
+      let note = "";
+
+      if (form === "自由行") {
+        if (adults === 1 && children === 0) {
+          totalMin = adjustedAdult * 2;
+          totalMax = totalMin;
+          note = "自由行 1 人通常按 1 套（2 人套价）承接。";
+        } else if (adults >= 4 && children === 0) {
+          totalMin = Math.round(adjustedAdult * adults * 0.9);
+          totalMax = totalMin;
+          note = "按多人同行折扣做了简化预估。";
+        } else {
+          totalMin = adjustedAdult * adults;
+          totalMax = totalMin;
+        }
+      } else if (form === "私享管家") {
+        if (adults === 1 && children === 0) {
+          totalMin = Math.round(adjustedAdult * 2 * 0.8);
+          totalMax = totalMin;
+          note = "按单人私享约 0.8 套做简化预估。";
+        } else if (adults === 3 && children === 0) {
+          totalMin = Math.round(adjustedAdult * 2 * 1.5);
+          totalMax = Math.round(adjustedAdult * 2 * 1.8);
+          note = "3 位成人私享按不同资源使用方式会有区间。";
+        } else {
+          totalMin = adjustedAdult * adults;
+          totalMax = totalMin;
+        }
+      } else {
+        totalMin = adjustedAdult * adults;
+        totalMax = totalMin;
+        if (adults < 4) {
+          note = "主题团最终还会受成团人数影响，这里按客单价简化预估。";
+        }
+      }
+
+      if (children > 0) {
+        const childLow = form === "主题团" ? 0.5 : 0.4;
+        const childHigh = form === "私享管家" ? 0.8 : 0.7;
+        totalMin += Math.round(adjustedAdult * children * childLow);
+        totalMax += Math.round(adjustedAdult * children * childHigh);
+        note = note
+          ? note + " 儿童年龄未明确，先按常见儿童折扣区间估算。"
+          : "儿童年龄未明确，先按常见儿童折扣区间估算。";
+      }
+
+      return {
+        form,
+        adultUnit: adjustedAdult,
+        totalMin,
+        totalMax: Math.max(totalMin, totalMax),
+        note: note || "最终仍需以实际房型、资源、儿童年龄和车司管配置核价。",
+      };
+    }
+
+    function formatCurrency(value) {
+      return value.toLocaleString("zh-CN");
+    }
+
+    function buildRecommendationResponse() {
+      const ranked = PRODUCTS
+        .map(scoreProduct)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+
+      const top = ranked[0];
+      const destinationLabel = destinationMap.find((item) => item.key === slotState.destination)?.label || "未指定";
+      const intro = `我先按当前信息给你做一版销售建议：客户更适合往“${destinationLabel}”方向推进，优先推荐标品，必要时再转轻微变形或定制。以下是当前更合适的产品。`;
+
+      const cards = ranked.map((product) => {
+        const price = estimatePrice(product);
+        return {
+          title: product.name,
+          meta: `${product.line} · ${product.route} · ${product.nights}晚 · ${price.form}`,
+          score: product.score,
+          description: product.description,
+          itinerary: product.itinerary,
+          tags: product.tags.slice(0, 6),
+          reasons: product.reasons.length ? product.reasons : ["与当前需求整体相容度较高。"],
+          risks: product.risks,
+          priceText: price.totalMin === price.totalMax
+            ? `预估总价：约 ¥${formatCurrency(price.totalMin)}`
+            : `预估总价：约 ¥${formatCurrency(price.totalMin)} - ¥${formatCurrency(price.totalMax)}`,
+          unitText: `预估成人客单参考：约 ¥${formatCurrency(price.adultUnit)} / 人`,
+          note: price.note,
+          salesTip: buildSalesTip(product, top === product),
+        };
+      });
+
+      return { intro, cards };
+    }
+
+    function buildSalesTip(product, isTop) {
+      if (slotState.customization === "深度定制") {
+        return `建议先用 ${product.name} 当母版，继续确认首尾酒店、房型、活动和车司管要怎么变，再判断是否进入定制计价。`;
+      }
+      if (slotState.children) {
+        return `建议先卖 ${product.name} 的体验和节奏，再补充儿童占床/加床与儿童价规则，避免后面客户对价格结构产生疑问。`;
+      }
+      if (isTop) {
+        return `建议把 ${product.name} 放第一顺位，同时准备 1 条相近备选，围绕“景观强度、节奏轻重、产品形态”做对比，会比直接聊价格更容易推进。`;
+      }
+      return `这条更适合作为备选方案，方便客户在“更轻松 / 更深度 / 更高景观”之间做对比。`;
+    }
+
+    function buildFollowUpResponse(missing) {
+      const summary = renderSlotSummaryText();
+      let question = "";
+      if (missing.length === 1) question = `我还差 1 个关键信息：${missing[0]}。`;
+      else question = `我还差几个关键信息：${missing.join("、")}。`;
+
+      return `${question}\n\n目前我已经识别到：${summary}\n\n你继续补一句就行，例如：“4 月出发，5 晚 6 天，2 大 1 小，想轻松一点”。`;
+    }
+
+    function renderSlotSummaryText() {
+      const map = {
+        destination: destinationMap.find((item) => item.key === slotState.destination)?.label,
+        month: slotState.month ? `${slotState.month}月` : null,
+        nights: slotState.nights ? `${slotState.nights}晚` : null,
+        travelers: slotState.travelers ? `${slotState.travelers}人` : null,
+        adults: slotState.adults ? `${slotState.adults}位成人` : null,
+        children: slotState.children ? `${slotState.children}位儿童` : null,
+        productForm: slotState.productForm,
+        preference: slotState.preference,
+        budget: slotState.budget,
+      };
+      const values = Object.values(map).filter(Boolean);
+      return values.length ? values.join("，") : "暂时还没有识别到完整需求";
+    }
+
+    function slotRows() {
+      return [
+        ["目的地方向", destinationMap.find((item) => item.key === slotState.destination)?.label || "未识别"],
+        ["出行月份", slotState.month ? `${slotState.month}月` : "未识别"],
+        ["晚数 / 天数", slotState.nights ? `${slotState.nights}晚${slotState.nights + 1}天` : "未识别"],
+        ["人数", slotState.travelers ? `${slotState.travelers}人` : "未识别"],
+        ["成人 / 儿童", `${slotState.adults || 0}位成人 / ${slotState.children || 0}位儿童`],
+        ["老人同行", slotState.elders ? "有" : "无"],
+        ["外籍客人", slotState.foreignGuests ? "有" : "无"],
+        ["产品形态", slotState.productForm || "未指定"],
+        ["旅行偏好", slotState.preference || "未指定"],
+        ["预算倾向", slotState.budget || "未指定"],
+        ["定制程度", slotState.customization || "标品优先"],
+      ];
+    }
+
+    function renderSlots() {
+      const slotList = document.getElementById("slot-list");
+      slotList.innerHTML = "";
+      slotRows().forEach(([label, value]) => {
+        const el = document.createElement("div");
+        el.className = "slot";
+        el.innerHTML = `<div class="slot-label">${label}</div><div class="slot-value">${value}</div>`;
+        slotList.appendChild(el);
+      });
+    }
+
+    function addMessage(role, content, cards = null) {
+      const container = document.getElementById("messages");
+      const message = document.createElement("div");
+      message.className = `message ${role}`;
+
+      const roleName = role === "assistant" ? "Assistant" : "Sales";
+      message.innerHTML = `
+        <div class="message-meta">${roleName}</div>
+        <div class="message-body"></div>
+      `;
+      message.querySelector(".message-body").textContent = content;
+
+      if (cards && cards.length) {
+        const stack = document.createElement("div");
+        stack.className = "result-stack";
+        cards.forEach((card) => {
+          const el = document.createElement("div");
+          el.className = "result-card";
+          el.innerHTML = `
+            <div class="result-top">
+              <div>
+                <h4>${card.title}</h4>
+                <div class="muted">${card.meta}</div>
+              </div>
+              <div class="score">${card.score}分</div>
+            </div>
+            <div class="muted">${card.description}</div>
+            <div class="pill-row">${card.tags.map((tag) => `<span class="pill">${tag}</span>`).join("")}</div>
+            <div class="section-title">推荐行程</div>
+            <div class="muted">${card.itinerary}</div>
+            <div class="section-title">推荐理由</div>
+            <ul class="bullet-list">${card.reasons.map((item) => `<li>${item}</li>`).join("")}</ul>
+            <div class="section-title">预估价格</div>
+            <div class="muted">${card.priceText}</div>
+            <div class="muted">${card.unitText}</div>
+            <div class="muted" style="margin-top:4px;">${card.note}</div>
+            <div class="section-title">注意事项</div>
+            <ul class="bullet-list">${card.risks.map((item) => `<li>${item}</li>`).join("")}</ul>
+            <div class="section-title">销售建议</div>
+            <div class="muted">${card.salesTip}</div>
+          `;
+          stack.appendChild(el);
+        });
+        message.appendChild(stack);
+      }
+
+      container.appendChild(message);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function handleUserMessage(text) {
+      addMessage("user", text);
+      const parsed = parseDemand(text);
+      mergeSlots(parsed);
+      renderSlots();
+
+      const missing = getMissingSlots();
+      if (missing.length) {
+        addMessage("assistant", buildFollowUpResponse(missing));
+        return;
+      }
+
+      const response = buildRecommendationResponse();
+      addMessage("assistant", response.intro, response.cards);
+    }
+
+    function seedPrompts() {
+      const container = document.getElementById("quick-prompts");
+      QUICK_PROMPTS.forEach((prompt) => {
+        const button = document.createElement("button");
+        button.textContent = prompt;
+        button.addEventListener("click", () => {
+          document.getElementById("user-input").value = prompt;
+          sendMessage();
+        });
+        container.appendChild(button);
+      });
+    }
+
+    function resetConversation() {
+      Object.assign(slotState, {
+        destination: null,
+        month: null,
+        nights: null,
+        days: null,
+        travelers: null,
+        adults: null,
+        children: null,
+        elders: false,
+        foreignGuests: false,
+        productForm: null,
+        preference: null,
+        budget: null,
+        customization: "标品优先",
+      });
+
+      const messages = document.getElementById("messages");
+      messages.innerHTML = "";
+      renderSlots();
+      addMessage(
+        "assistant",
+        "你可以直接把客户需求丢给我，例如：\n“客户想 4 月去林芝看桃花，5 晚 6 天，2 大 1 小，偏轻松，预算品质优先。”\n\n如果信息不完整，我会继续追问；如果信息够了，我会直接给你推荐产品和预估价。"
+      );
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("user-input");
+      const text = input.value.trim();
+      if (!text) return;
+      handleUserMessage(text);
+      input.value = "";
+      input.focus();
+    }
+
+    document.getElementById("send-button").addEventListener("click", sendMessage);
+    document.getElementById("clear-button").addEventListener("click", resetConversation);
+    document.getElementById("user-input").addEventListener("keydown", (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") sendMessage();
+    });
+
+    seedPrompts();
+    resetConversation();
+  </script>
+</body>
+</html>
