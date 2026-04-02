@@ -1012,9 +1012,19 @@
       return window.localStorage.getItem(GDS_TOKEN_KEY) || "";
     }
 
+    function sanitizeToken(raw) {
+      return String(raw || "")
+        .replace(/^authorization\s*[：:]\s*/i, "")
+        .replace(/^bearer\s+/i, "")
+        .replace(/[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g, " ")
+        .replace(/\s+/g, "")
+        .trim();
+    }
+
     function setStoredToken(token) {
-      if (token) {
-        window.localStorage.setItem(GDS_TOKEN_KEY, token);
+      const cleaned = sanitizeToken(token);
+      if (cleaned) {
+        window.localStorage.setItem(GDS_TOKEN_KEY, cleaned);
       } else {
         window.localStorage.removeItem(GDS_TOKEN_KEY);
       }
@@ -1022,7 +1032,7 @@
     }
 
     function updateAuthStatus(message) {
-      const token = getStoredToken();
+      const token = sanitizeToken(getStoredToken());
       const status = document.getElementById("auth-status");
       if (message) {
         status.textContent = message;
@@ -1313,7 +1323,7 @@
     }
 
     async function fetchTravelGroups(title) {
-      const token = getStoredToken();
+      const token = sanitizeToken(getStoredToken());
       if (!token) return [];
 
       const url = `${GDS_BASE_URL}/product-journey/bks/travelGroupProvider/listTravelGroupForOrder?firstResult=0&pageSize=100&unitCode=${encodeURIComponent(GDS_UNIT_CODE)}`;
@@ -1718,13 +1728,18 @@
     document.getElementById("clear-button").addEventListener("click", resetConversation);
     document.getElementById("save-token-button").addEventListener("click", () => {
       const input = document.getElementById("gds-token");
-      const token = input.value.trim();
+      const token = sanitizeToken(input.value);
       if (!token) {
         updateAuthStatus("请先粘贴 token 再保存。");
         return;
       }
+      if (!/^[A-Za-z0-9._-]+$/.test(token)) {
+        updateAuthStatus("token 里包含异常字符。请只粘贴纯 Authorization 值，不要带中文标点或额外说明。");
+        return;
+      }
       setStoredToken(token);
       input.value = "";
+      updateAuthStatus("token 已清洗并保存。现在可以直接查询真实团期。");
     });
     document.getElementById("clear-token-button").addEventListener("click", () => {
       setStoredToken("");
