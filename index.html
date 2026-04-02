@@ -983,10 +983,21 @@
     }
 
     function buildRecommendationResponse() {
-      const ranked = PRODUCTS
+      const candidateProducts = slotState.destination
+        ? PRODUCTS.filter((product) => product.destination === slotState.destination)
+        : PRODUCTS;
+
+      const ranked = candidateProducts
         .map(scoreProduct)
         .sort((a, b) => b.score - a.score)
         .slice(0, 3);
+
+      if (!ranked.length) {
+        return {
+          intro: "当前目的地下我还没有可用的产品候选，建议先确认是否接受相邻区域产品，或者补充更多需求后再判断。",
+          cards: [],
+        };
+      }
 
       const top = ranked[0];
       const destinationLabel = destinationMap.find((item) => item.key === slotState.destination)?.label || "未指定";
