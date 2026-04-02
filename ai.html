@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProductRecommend AI</title>
+  <style>
+    body { margin: 0; font-family: "PingFang SC","Microsoft YaHei",sans-serif; background: #f3ece3; color: #241913; }
+    .app { width: min(1200px, calc(100% - 24px)); margin: 0 auto; padding: 20px 0; display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 16px; }
+    .panel { background: rgba(255,250,244,.94); border: 1px solid rgba(116,73,39,.12); border-radius: 22px; box-shadow: 0 20px 50px rgba(53,31,18,.12); }
+    .chat { min-height: calc(100vh - 40px); display: grid; grid-template-rows: auto 1fr auto; padding: 20px; gap: 14px; }
+    .side { padding: 20px; position: sticky; top: 20px; height: fit-content; }
+    h1,h2,h3,p { margin: 0; }
+    .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: #8a4f24; font-weight: 800; margin-bottom: 8px; }
+    .muted { color: #6b5c51; line-height: 1.7; }
+    .messages { display: grid; gap: 12px; align-content: start; overflow: auto; padding-right: 6px; }
+    .msg { padding: 16px; border-radius: 18px; max-width: 88%; white-space: pre-wrap; line-height: 1.8; }
+    .msg.user { justify-self: end; background: linear-gradient(135deg,#9c5a2b,#7d431d); color: white; }
+    .msg.assistant { background: white; border: 1px solid rgba(116,73,39,.08); }
+    .composer { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+    textarea { min-height: 88px; resize: vertical; border-radius: 16px; border: 1px solid rgba(116,73,39,.14); padding: 14px; font: inherit; }
+    button { border: none; cursor: pointer; border-radius: 16px; font: inherit; font-weight: 800; padding: 14px 18px; }
+    .send { background: linear-gradient(135deg,#a05e30,#7b421c); color: white; }
+    .meta-card { padding: 14px; border-radius: 14px; background: rgba(255,248,240,.9); border: 1px solid rgba(116,73,39,.08); margin-top: 12px; }
+    .meta-label { font-size: 12px; color: #8a4f24; font-weight: 800; margin-bottom: 4px; text-transform: uppercase; }
+    .product-card { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(116,73,39,.1); }
+    .pill { display:inline-flex; padding:6px 10px; border-radius:999px; background:rgba(138,79,36,.1); color:#8a4f24; font-size:12px; font-weight:700; margin: 8px 8px 0 0; }
+    @media (max-width: 960px) { .app { grid-template-columns: 1fr; } .side { position: static; } .composer { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="panel chat">
+      <div>
+        <p class="eyebrow">AI Sales Assistant</p>
+        <h1>ProductRecommend 真 AI 版</h1>
+        <p class="muted">这个版本会通过后端调用 OpenAI 模型理解需求，再结合本地产品和价格规则给出销售建议。</p>
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="composer">
+        <textarea id="input" placeholder="例如：客户想 4 月 10 日去香格里拉，6 晚 7 天，2 大 1 小，小朋友 5 岁，偏轻松一点，预算品质优先。"></textarea>
+        <button class="send" id="send">发送</button>
+      </div>
+    </section>
+
+    <aside class="panel side">
+      <p class="eyebrow">Parsed Context</p>
+      <h2>模型识别结果</h2>
+      <div id="needs"></div>
+      <div id="ranked"></div>
+    </aside>
+  </div>
+  <script src="./ai-client.js" type="module"></script>
+</body>
+</html>

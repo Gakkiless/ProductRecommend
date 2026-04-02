@@ -6,6 +6,23 @@
 
 直接打开 [`index.html`](/Users/gakki/Documents/New project/index.html) 即可使用。
 
+## 真 AI 版本
+
+仓库里现在额外提供了一个需要后端和 OpenAI API 的版本。
+
+1. 配置环境变量
+   使用 [`/.env.example`](/Users/gakki/Documents/New project/.env.example) 中的变量，至少设置 `OPENAI_API_KEY`
+2. 启动服务
+   运行 `npm start`
+3. 打开地址
+   访问 `http://localhost:3000/ai`
+
+这个版本不是纯关键词匹配，而是：
+
+- 先调用 OpenAI 模型理解自然语言需求
+- 再结合本地产品知识和价格规则做 grounded ranking
+- 最后再生成更像销售助手的自然语言回复
+
 ## 当前能力
 
 - 覆盖拉萨、梅里、香格里拉、冰川、昆明普洱、亲子、桃花节、杜鹃季、低空、主题产品等主要方向
