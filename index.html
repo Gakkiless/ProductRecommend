@@ -674,6 +674,7 @@
     const slotState = {
       destination: null,
       month: null,
+      dateText: null,
       nights: null,
       days: null,
       travelers: null,
@@ -735,6 +736,22 @@
 
       const month = extractFirstNumber(normalized, /([一二三四五六七八九十两\d]{1,3})月/);
       if (month) update.month = month;
+
+      const datePatterns = [
+        /((?:20\d{2}[年\/.-])?[一二三四五六七八九十两\d]{1,4}月[一二三四五六七八九十两\d]{1,3}[日号]?)/,
+        /((?:20\d{2}[\/.-])?\d{1,2}[\/.-]\d{1,2})/
+      ];
+      for (const pattern of datePatterns) {
+        const match = normalized.match(pattern);
+        if (match) {
+          update.dateText = match[1];
+          break;
+        }
+      }
+
+      if (/春节|新年|过年|元旦|跨年|五一|劳动节|国庆|十一|黄金周|中秋/.test(normalized)) {
+        update.dateText = update.dateText || normalized.match(/春节|新年|过年|元旦|跨年|五一|劳动节|国庆|十一|黄金周|中秋/)[0];
+      }
 
       const nights = extractFirstNumber(normalized, /([一二三四五六七八九十两\d]{1,3})晚/);
       if (nights) update.nights = nights;
@@ -798,13 +815,86 @@
       return missing;
     }
 
-    function seasonMultiplier(destination, month) {
-      if (!month) return 1;
-      if (destination === "glacier" && [3,4].includes(month)) return 1.08;
-      if (destination === "lhasa" && [4,5,6,7,8,9,10].includes(month)) return 1.05;
-      if (destination === "meili" && [1,2,10,11].includes(month)) return 1.03;
-      if (destination === "puer" && [6,7,8].includes(month)) return 0.96;
-      return 1;
+    function parseMonthDayFromText(dateText, fallbackMonth) {
+      if (!dateText) {
+        return { month: fallbackMonth || null, day: null, keyword: null };
+      }
+
+      if (/春节|新年|过年/.test(dateText)) return { month: fallbackMonth || 1, day: null, keyword: "春节" };
+      if (/元旦|跨年/.test(dateText)) return { month: 1, day: 1, keyword: "元旦" };
+      if (/五一|劳动节/.test(dateText)) return { month: 5, day: 1, keyword: "五一" };
+      if (/国庆|十一|黄金周/.test(dateText)) return { month: 10, day: 1, keyword: "国庆" };
+      if (/中秋/.test(dateText)) return { month: fallbackMonth || 9, day: null, keyword: "中秋" };
+
+      const monthDay = dateText.match(/([一二三四五六七八九十两\d]{1,4})月([一二三四五六七八九十两\d]{1,3})/);
+      if (monthDay) {
+        return {
+          month: chineseNumberToDigit(monthDay[1]),
+          day: chineseNumberToDigit(monthDay[2]),
+          keyword: null,
+        };
+      }
+
+      const slashDay = dateText.match(/(\d{1,2})[\/.-](\d{1,2})/);
+      if (slashDay) {
+        return { month: Number(slashDay[1]), day: Number(slashDay[2]), keyword: null };
+      }
+
+      return { month: fallbackMonth || null, day: null, keyword: null };
+    }
+
+    function getSeasonPricingContext(destination, month, dateText) {
+      const parsed = parseMonthDayFromText(dateText, month);
+      const actualMonth = parsed.month || month;
+
+      if (parsed.keyword === "春节" || parsed.keyword === "元旦" || parsed.keyword === "五一" || parsed.keyword === "国庆" || parsed.keyword === "中秋") {
+        return {
+          label: "节日",
+          multiplier: 1.12,
+          note: "按节日档做预估，正式价格仍需以当期政策和资源为准。",
+        };
+      }
+
+      if (!actualMonth) {
+        return {
+          label: "平季",
+          multiplier: 1,
+          note: "未明确出行日期，先按平季预估。",
+        };
+      }
+
+      if (destination === "glacier") {
+        if ([3, 4].includes(actualMonth)) return { label: "旺季", multiplier: 1.08, note: "林芝桃花与春季窗口通常按旺季预估。" };
+        if ([7, 8].includes(actualMonth)) return { label: "旺季", multiplier: 1.06, note: "暑期和高景观季通常会更偏旺季。" };
+        if ([11, 12, 1, 2].includes(actualMonth)) return { label: "淡季", multiplier: 0.95, note: "冬季先按淡季预估。" };
+        return { label: "平季", multiplier: 1, note: "按常规平季预估。" };
+      }
+
+      if (destination === "lhasa") {
+        if ([4, 5, 6, 7, 8, 9, 10].includes(actualMonth)) return { label: "旺季", multiplier: 1.05, note: "拉萨常规出行窗口先按旺季预估。" };
+        if ([11, 12, 1, 2].includes(actualMonth)) return { label: "淡季", multiplier: 0.96, note: "冬季先按淡季预估。" };
+        return { label: "平季", multiplier: 1, note: "按常规平季预估。" };
+      }
+
+      if (destination === "meili") {
+        if ([1, 2, 10, 11].includes(actualMonth)) return { label: "旺季", multiplier: 1.03, note: "梅里观景强窗口先按旺季预估。" };
+        if ([6, 7, 8].includes(actualMonth)) return { label: "平季", multiplier: 1, note: "雨季与常规季先按平季预估。" };
+        return { label: "平季", multiplier: 1, note: "按常规平季预估。" };
+      }
+
+      if (destination === "shangri-la") {
+        if ([7, 8, 10].includes(actualMonth)) return { label: "旺季", multiplier: 1.04, note: "香格里拉暑期与秋季强窗口先按旺季预估。" };
+        if ([12, 1, 2].includes(actualMonth)) return { label: "平季", multiplier: 1, note: "冬季先按平季预估。" };
+        return { label: "平季", multiplier: 1, note: "按常规平季预估。" };
+      }
+
+      if (destination === "puer") {
+        if ([6, 7, 8].includes(actualMonth)) return { label: "淡季", multiplier: 0.96, note: "雨季先按淡季预估。" };
+        if ([10, 11, 12, 1, 2].includes(actualMonth)) return { label: "旺季", multiplier: 1.03, note: "秋冬舒适季先按旺季预估。" };
+        return { label: "平季", multiplier: 1, note: "按常规平季预估。" };
+      }
+
+      return { label: "平季", multiplier: 1, note: "按平季预估。" };
     }
 
     function scoreProduct(product) {
@@ -940,8 +1030,8 @@
       const adultUnit = product.pricing[form];
       const adults = slotState.adults || slotState.travelers || 2;
       const children = slotState.children || 0;
-      const multiplier = seasonMultiplier(product.destination, slotState.month);
-      const adjustedAdult = Math.round(adultUnit * multiplier);
+      const season = getSeasonPricingContext(product.destination, slotState.month, slotState.dateText);
+      const adjustedAdult = Math.round(adultUnit * season.multiplier);
 
       let totalMin = 0;
       let totalMax = 0;
@@ -993,10 +1083,11 @@
 
       return {
         form,
+        seasonLabel: season.label,
         adultUnit: adjustedAdult,
         totalMin,
         totalMax: Math.max(totalMin, totalMax),
-        note: note || "最终仍需以实际房型、资源、儿童年龄和车司管配置核价。",
+        note: note ? `${season.note} ${note}` : `${season.note} 最终仍需以实际房型、资源、儿童年龄和车司管配置核价。`,
       };
     }
 
@@ -1043,9 +1134,9 @@
           reasons: product.reasons.length ? product.reasons : ["与当前需求整体相容度较高。"],
           risks: product.risks,
           priceText: price.totalMin === price.totalMax
-            ? `预估总价：约 ¥${formatCurrency(price.totalMin)}`
-            : `预估总价：约 ¥${formatCurrency(price.totalMin)} - ¥${formatCurrency(price.totalMax)}`,
-          unitText: `预估成人客单参考：约 ¥${formatCurrency(price.adultUnit)} / 人`,
+            ? `预估总价：约 ¥${formatCurrency(price.totalMin)}（${price.seasonLabel}）`
+            : `预估总价：约 ¥${formatCurrency(price.totalMin)} - ¥${formatCurrency(price.totalMax)}（${price.seasonLabel}）`,
+          unitText: `预估成人客单参考：约 ¥${formatCurrency(price.adultUnit)} / 人（${price.seasonLabel}）`,
           note: price.note,
           salesTip: buildSalesTip(product, top === product),
         };
@@ -1080,6 +1171,7 @@
       const map = {
         destination: destinationMap.find((item) => item.key === slotState.destination)?.label,
         month: slotState.month ? `${slotState.month}月` : null,
+        dateText: slotState.dateText || null,
         nights: slotState.nights ? `${slotState.nights}晚` : null,
         travelers: slotState.travelers ? `${slotState.travelers}人` : null,
         adults: slotState.adults ? `${slotState.adults}位成人` : null,
@@ -1095,7 +1187,7 @@
     function slotRows() {
       return [
         ["目的地方向", destinationMap.find((item) => item.key === slotState.destination)?.label || "未识别"],
-        ["出行月份", slotState.month ? `${slotState.month}月` : "未识别"],
+        ["出行日期", slotState.dateText || (slotState.month ? `${slotState.month}月` : "未识别")],
         ["晚数 / 天数", slotState.nights ? `${slotState.nights}晚${slotState.nights + 1}天` : "未识别"],
         ["人数", slotState.travelers ? `${slotState.travelers}人` : "未识别"],
         ["成人 / 儿童", `${slotState.adults || 0}位成人 / ${slotState.children || 0}位儿童`],
@@ -1202,6 +1294,7 @@
       Object.assign(slotState, {
         destination: null,
         month: null,
+        dateText: null,
         nights: null,
         days: null,
         travelers: null,
