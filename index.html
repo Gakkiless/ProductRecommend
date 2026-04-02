@@ -1394,13 +1394,9 @@
 
     function groupMatchesProduct(group, product) {
       const nameText = normalizeText(group.travelTypeDesc || "");
-      const metaText = normalizeText(`${group.businessType || ""} ${group.itineraryDesc || ""}`);
       const attachKeywords = uniq([...(LIVE_ATTACH_HINTS[product.id] || []), product.name]).map(normalizeText);
-      const fallbackKeywords = uniq([product.line]).map(normalizeText);
-
       const nameHit = attachKeywords.some((keyword) => nameText.includes(keyword));
-      const fallbackHit = fallbackKeywords.some((keyword) => metaText.includes(keyword));
-      if (!nameHit && !fallbackHit) return false;
+      if (!nameHit) return false;
 
       if (slotState.productForm) {
         const formText = `${group.businessType} ${group.travelTypeDesc}`.replace(/\s+/g, "");
