@@ -2,6 +2,7 @@ export const PRODUCT_CATALOG = [
   {
     id: "BC-02",
     name: "最美四百公里",
+    liveMatchKeywords: ["最美四百公里"],
     line: "冰川环线",
     route: "波波来波达",
     destination: "glacier",
@@ -24,6 +25,7 @@ export const PRODUCT_CATALOG = [
   {
     id: "BC-01",
     name: "探索生命的力量",
+    liveMatchKeywords: ["探索生命的力量", "遇见桃花与冰川"],
     line: "冰川环线",
     route: "波波来来波达达",
     destination: "glacier",
@@ -46,6 +48,7 @@ export const PRODUCT_CATALOG = [
   {
     id: "BC-03",
     name: "探访莲花秘境",
+    liveMatchKeywords: ["探访莲花秘境"],
     line: "冰川环线",
     route: "波波墨波达",
     destination: "glacier",
@@ -68,6 +71,7 @@ export const PRODUCT_CATALOG = [
   {
     id: "LS-02",
     name: "雪山圣湖布达拉",
+    liveMatchKeywords: ["雪山圣湖布达拉"],
     line: "拉萨环线",
     route: "达达巴巴拉拉拉",
     destination: "lhasa",
@@ -90,6 +94,7 @@ export const PRODUCT_CATALOG = [
   {
     id: "LS-05",
     name: "遇见圣湖与圣城",
+    liveMatchKeywords: ["遇见圣湖与圣城"],
     line: "拉萨环线",
     route: "巴巴巴拉拉",
     destination: "lhasa",
@@ -112,6 +117,7 @@ export const PRODUCT_CATALOG = [
   {
     id: "ML-03",
     name: "天人之际",
+    liveMatchKeywords: ["天人之际"],
     line: "梅里环线",
     route: "奔奔梅梅香",
     destination: "meili",
@@ -134,6 +140,7 @@ export const PRODUCT_CATALOG = [
   {
     id: "ML-01",
     name: "穿越三江并流",
+    liveMatchKeywords: ["穿越三江并流"],
     line: "梅里环线",
     route: "石石丙丙茨梅香丽",
     destination: "meili",
@@ -156,6 +163,7 @@ export const PRODUCT_CATALOG = [
   {
     id: "SG-01",
     name: "回到远方的家",
+    liveMatchKeywords: ["回到远方的家"],
     line: "香格里拉环线",
     route: "丽丽塔塔绿绿",
     destination: "shangri-la",
@@ -178,6 +186,7 @@ export const PRODUCT_CATALOG = [
   {
     id: "SG-02",
     name: "亚丁的远山",
+    liveMatchKeywords: ["亚丁的远山", "初探亚丁三神山"],
     line: "香格里拉环线",
     route: "丽香香亚亚亚",
     destination: "shangri-la",
@@ -200,6 +209,7 @@ export const PRODUCT_CATALOG = [
   {
     id: "PE-01",
     name: "滇南漫时光",
+    liveMatchKeywords: ["滇南漫时光", "探寻美好"],
     line: "普洱",
     route: "普普普普",
     destination: "puer",
